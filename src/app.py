@@ -1,51 +1,25 @@
-import os
-from datetime import timedelta
-
-from flask import Flask, jsonify
-from flask_jwt_extended import JWTManager
-from flask_migrate import Migrate
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+
+from src.helpers.db import init_db
+from src.helpers.jwt_config import init_jwt
 
 db = SQLAlchemy()
 
 
 def create_app():
-    DB_PASS = os.getenv("MYSQL_ROOT_PASSWORD")
-    DB_PORT = os.getenv("MYSQL_PORT")
-    DB_HOST = os.getenv("MYSQL_HOST")
-    DB_DB = os.getenv("MYSQL_DATABASE")
-
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"mysql+pymysql://root:{ DB_PASS }@{DB_HOST}:{DB_PORT}/{DB_DB}"
-    )
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key")
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)  # 1 hour expiry
-    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)  # 7 days expiry
-    app.config["JWT_TOKEN_LOCATION"] = ["headers"]  # Default: Authorization Header
-    app.config["JWT_HEADER_NAME"] = "Authorization"
-    app.config["JWT_HEADER_TYPE"] = "Bearer"
-    db.init_app(app)
-    migrate = Migrate(app, db)
-    jwt = JWTManager()
-    jwt.init_app(app)
-    from flask_jwt_extended.exceptions import NoAuthorizationError
-    from werkzeug.exceptions import HTTPException
-
-    @app.errorhandler(NoAuthorizationError)
-    def handle_no_authorization_error(e):
-        return jsonify({"error": "Authorization token is missing or invalid"}), 401
-
-    @app.errorhandler(HTTPException)
-    def handle_http_exception(e):
-        response = e.get_response()
-        response.data = jsonify({"error": e.description}).data
-        response.content_type = "application/json"
-        return response
-        # blueprints
-
+    init_db(app, db)
+    init_jwt(app)
+    from src.admin.routes import admin
+    from src.appointments.routes import appointments
     from src.auth.routes import auth
+    from src.availability.routes import availability
+    from src.users.routes import users
 
     app.register_blueprint(auth, url_prefix="/auth")
+    app.register_blueprint(admin, url_prefix="/admin")
+    app.register_blueprint(appointments, url_prefix="/appointments")
+    app.register_blueprint(availability, url_prefix="/availability")
+    app.register_blueprint(users, url_prefix="/users")
     return app
