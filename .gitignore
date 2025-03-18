@@ -15,4 +15,5 @@ build/
 
 .env
 */**/migrations/
+migrations
 *.log
