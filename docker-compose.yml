@@ -1,4 +1,25 @@
 services:
+  doctor_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: doctor_backend
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: doctor_mysql
+
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "flask db upgrade &&
+      gunicorn --bind 0.0.0.0:5000 --workers 4 --access-logfile - --error-logfile - --log-level debug run:app"
+    depends_on:
+      doctor_mysql:
+        condition: service_healthy
+    networks:
+      - doctor_network
+
   doctor_mysql:
     image: mysql:latest
     container_name: doctor_mysql
@@ -13,6 +34,16 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - doctor_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
 
 volumes:
   mysql_data:
+
+networks:
+  doctor_network:
+    driver: bridge
