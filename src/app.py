@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
 from src.helpers.db import init_db
@@ -9,6 +10,14 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
+    CORS(
+        app,
+        origins=["http://localhost:3000", "https://example.com"],  # Allowed origins
+        methods=["GET", "POST", "PUT", "DELETE"],  # Allowed methods
+        allow_headers=["Content-Type", "Authorization"],  # Allowed headers
+        supports_credentials=True,  # Allow cookies
+    )
+
     init_db(app, db)
     init_jwt(app)
     from src.admin.routes import admin
