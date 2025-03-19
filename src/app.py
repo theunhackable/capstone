@@ -12,14 +12,23 @@ def create_app():
     app = Flask(__name__)
     CORS(
         app,
-        origins=["http://localhost:3000", "https://example.com"],  # Allowed origins
-        methods=["GET", "POST", "PUT", "DELETE"],  # Allowed methods
+        origins=[
+            "http://localhost:3000",
+            "http://localhost:3000/",
+            "https://example.com",
+        ],  # Allowed origins
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Allowed methods
         allow_headers=["Content-Type", "Authorization"],  # Allowed headers
         supports_credentials=True,  # Allow cookies
     )
 
     init_db(app, db)
     init_jwt(app)
+
+    @app.route("/")
+    def home():
+        return {"message": "CORS is configured for Next.js!"}
+
     from src.admin.routes import admin
     from src.appointments.routes import appointments
     from src.auth.routes import auth
