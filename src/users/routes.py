@@ -10,6 +10,14 @@ from src.utils import role_required
 users = Blueprint("users", __name__)
 
 
+@users.get("/")
+@jwt_required()
+@role_required(["admin"])
+def get_all_users():
+    users = User.query.filter_by(role="client").all()
+    return jsonify({"users": [user.to_dict() for user in users]}), 200
+
+
 @users.get("/doctors")
 @jwt_required()
 @role_required(["admin", "client"])
@@ -43,13 +51,14 @@ def get_user(user_id):
 @jwt_required()
 @role_required(["admin", "doctor", "client"])
 def update_user(user_id):
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
+    current_user = User.query.get(current_user_id)
 
-    if not user:
+    if not user or not current_user:
         return jsonify({"message": "User not found"}), 404
 
-    if user.role != "admin" or user.id != current_user_id:
+    if current_user.role != "admin" and user.id != current_user_id:
         return jsonify({"message": "Access forbidden"}), 403
 
     try:
