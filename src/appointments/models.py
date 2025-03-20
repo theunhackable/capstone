@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
@@ -18,7 +18,10 @@ class Appointment(db.Model):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     date_time = Column(DateTime, nullable=False)
-    status = Column(Enum("up-coming", "on-going", "canceled"), default="up-coming")
+    status = Column(
+        Enum("pending", "confirmed", "on-going", "completed", "canceled", "up-coming"),
+        default="up-coming",
+    )
     client_requirements = Column(String(255))
 
     def __init__(
@@ -42,11 +45,18 @@ class Appointment(db.Model):
 
 
 class AppointmentBase(BaseModel):
-    user_id: int = Field(..., description="ID of the client")
-    doctor_id: int = Field(..., description="ID of the doctor")
-    date_time: datetime = Field(..., description="Date and time of the appointment")
+    user_id: int = Field(..., gt=0, description="ID of the client (must be positive)")
+    doctor_id: int = Field(..., gt=0, description="ID of the doctor (must be positive)")
+    date_time: datetime = Field(
+        ..., description="Date and time of the appointment (ISO 8601 format)"
+    )
+    status: Literal["up-coming", "on-going", "completed", "canceled"] = Field(
+        "up-coming", description="Status of the appointment"
+    )
     client_requirements: Optional[str] = Field(
-        None, description="Special requirements from the client"
+        None,
+        max_length=500,
+        description="Special requirements from the client (max 500 characters)",
     )
 
 

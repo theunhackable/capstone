@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.app import db
-from src.appointments.models import Appointment, AppointmentCreate
+from src.appointments.models import Appointment, AppointmentCreate, AppointmentUpdate
 from src.users.models import User
 from src.utils import role_required
 
@@ -38,7 +38,7 @@ def get_all_appointments():
 @jwt_required()
 @role_required(["admin", "doctor", "client"])
 def get_appointment(appointment_id):
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "user not found"}), 404
@@ -90,29 +90,41 @@ def create_appointment():
         return jsonify({"error": "Failed to create appointment"}), 500
 
 
-@appointments.put("/cancel/<int:appointment_id>")
+@appointments.put("/status/<int:appointment_id>")
 @jwt_required()
 @role_required(["doctor", "client"])
-def cancel_appointment(appointment_id):
-    user_id = get_jwt_identity()
+def update_appointment_status(appointment_id):
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
+
     if not user:
-        return jsonify({"message": "user not found"}), 404
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.get_json()
+    try:
+        updated_appointment = AppointmentUpdate(**data)
+    except Exception as e:
+        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
 
     appointment = Appointment.query.get(appointment_id)
 
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    # Authorization: doctor can only cancel their own appointments
-    if user.role == "doctor" and appointment.doctor_id != user_id:
+    if appointment.doctor_id != user_id and appointment.user_id != user_id:
         return jsonify({"error": "Unauthorized access"}), 403
 
-    # client can only cancel their own appointments
-    if user.role == "client" and appointment.user_id != user_id:
-        return jsonify({"error": "Unauthorized access"}), 403
+    if appointment.status in ["canceled", "completed"]:
+        return (
+            jsonify({"error": f"Cannot modify a {appointment.status} appointment."}),
+            400,
+        )
 
-    appointment.status = "canceled"
+    appointment.status = updated_appointment.status
+
     db.session.commit()
 
-    return jsonify({"msg": "Appointment canceled successfully"}), 200
+    return (
+        jsonify({"msg": f"Appointment {updated_appointment.status} successfully"}),
+        200,
+    )

@@ -93,7 +93,7 @@ def get_current_user():
     return jsonify({"user": user.to_dict()})
 
 
-@auth.post("/refresh")
+@auth.get("/refresh")
 @jwt_required(refresh=True)
 def refresh_token():
     user_id = get_jwt_identity()

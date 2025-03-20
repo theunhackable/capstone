@@ -10,17 +10,7 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    CORS(
-        app,
-        origins=[
-            "http://localhost:3000",
-            "http://localhost:3000/",
-            "https://example.com",
-        ],  # Allowed origins
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Allowed methods
-        allow_headers=["Content-Type", "Authorization"],  # Allowed headers
-        supports_credentials=True,  # Allow cookies
-    )
+    CORS(app)
 
     init_db(app, db)
     init_jwt(app)

@@ -18,6 +18,8 @@ def get_all_doctors():
     last_name = request.args.get("last_name", "").strip()
 
     query = User.query.filter_by(role="doctor").all()
+    if len(first_name) == 0 and len(last_name) == 0:
+        return jsonify({"doctors": [doctor.to_dict() for doctor in query]})
     doctors = filter(
         lambda doc: (first_name != "" and first_name in doc.first_name)
         or (last_name != "" and last_name in doc.last_name),
